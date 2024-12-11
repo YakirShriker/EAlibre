@@ -1,0 +1,54 @@
+---
+name: Backtest
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - 'v*-backtest'
+    paths:
+      - .github/workflows/backtest.yml
+  release:
+    types:
+      - published
+
+jobs:
+
+  compile:
+    name: Compile
+    uses: ./.github/workflows/compile.yml
+
+  backtest:
+
+    defaults:
+      run:
+        shell: bash
+
+    name: Backtest
+    needs: compile
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/download-artifact@v4.1.7
+        with:
+          name: EA
+
+      - name: Test ${{ matrix.year }}.${{ matrix.month }}
+        uses: fx31337/mql-tester-action@dev
+        with:
+          Login: ${{ secrets.MT5_LOGIN }}
+          Password: ${{ secrets.MT5_PASSWORD }}
+          Server: MetaQuotes-Demo
+          TestDeposit: ${{ matrix.deposit }}
+          TestExpert: EA31337-Libre.ex5
+          TestFromDate: ${{ matrix.year }}.01.01
+          TestPeriod: M1
+          TestSymbol: EURUSD
+          TestToDate: ${{ matrix.year }}.12.31
+          UrlExpert: file://${{ github.workspace }}/EA31337-Libre.ex5
+
+    strategy:
+      matrix:
+        deposit: [10000, 100000]
+        year: [2022, 2023]

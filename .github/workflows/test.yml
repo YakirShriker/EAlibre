@@ -1,0 +1,65 @@
+---
+name: Test
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - '**.h'
+      - '**.mq?'
+      - .github/workflows/test.yml
+      - src/*.mq?
+      - src/*.mq[45h]
+      - src/include/**
+  push:
+    paths:
+      - '**.h'
+      - '**.mq?'
+      - .github/workflows/test.yml
+      - src/*.mq?
+      - src/*.mq[45h]
+      - src/include/**
+
+jobs:
+
+  compile:
+    name: Compile
+    uses: ./.github/workflows/compile.yml
+
+  test:
+
+    defaults:
+      run:
+        shell: bash
+
+    name: Test
+    needs: compile
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          pattern: EA-Libre.ex?
+
+      - name: List compiled files
+        run: find . -name "*.ex[45]" -type f
+
+      - name: Run test
+        uses: fx31337/mql-tester-action@dev
+        with:
+          Login: ${{ secrets.MT5_LOGIN }}
+          Password: ${{ secrets.MT5_PASSWORD }}
+          Server: MetaQuotes-Demo
+          TestDeposit: 10000
+          TestExpert: EA31337-Libre.ex5
+          TestFromDate: 2024.01.01
+          TestModel: 1
+          TestPeriod: M15
+          TestSymbol: EURUSD
+          TestToDate: 2024.01.30
+          UrlExpert: file://${{ github.workspace }}/EA31337-Libre.ex5
+      - if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+    timeout-minutes: 20
